@@ -1,0 +1,108 @@
+# MIT License
+#
+# Copyright (c) 2022 David Schall and EASE Lab
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+name: Build Linux Kernel
+
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * 1"
+
+  push:
+    branches: [main]
+    paths:
+      - "kernel/**"
+
+  pull_request:
+    branches: [main]
+    paths:
+      - "kernel/**"
+
+env:
+  WORKDIR: kernel
+  MAKEFILE: kernel/Makefile
+  KERNEL: kernel
+
+jobs:
+  build:
+    name: Build kernel
+    # Building the kernel works also on the github runners.
+    # However, they only offer building on one core therefor it take a while
+    # Using self hosted is faster
+    runs-on: ubuntu-latest
+    # runs-on: [self-hosted, gem5-build]
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: [ amd64, arm64 ]
+        version: [ v5.15.59 ]
+
+    env:
+      ARCH: ${{ matrix.arch }}
+      KVERSION: ${{ matrix.version }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          make -f ${{ env.MAKEFILE }} dep_install
+
+      - name: Restore linux kernel cache
+        id: cache-linux-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: linux
+          key: ${{ runner.os }}-linux
+
+      - name: Fetch the Linux kernel sources and cache the content
+        shell: bash
+        run: |
+          make -f ${{ env.MAKEFILE }} get_sources
+
+      - name: Save linux kernel cache
+        id: cache-linux-save
+        uses: actions/cache/save@v4
+        with:
+          path: linux
+          key: ${{ runner.os }}-linux
+
+
+      - name: Configure and build the Linux kernel
+        shell: bash
+        run: |
+          make -f ${{ env.MAKEFILE }} build
+
+      - name: Rename
+        shell: bash
+        run: |
+          mv linux/vmlinux vmlinux-${{ matrix.version }}-${{ matrix.arch }}
+
+          
+      - name: Upload Kernel Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vmlinux-${{ matrix.version }}-${{ matrix.arch }}
+          path: vmlinux-${{ matrix.version }}-${{ matrix.arch }}

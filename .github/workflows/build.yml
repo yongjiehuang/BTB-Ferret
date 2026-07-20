@@ -1,0 +1,121 @@
+name: Benchmark Build and Push
+
+on:
+  # schedule:
+  #   - cron: "0 9 * * 1"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "benchmarks/**"
+
+  pull_request:
+    branches: [main]
+    paths:
+      - "benchmarks/**"
+
+env:
+  GOOS: linux
+  GO111MODULE: on
+  PLATFORMS: linux/amd64,linux/arm64
+
+jobs:
+  build-and-push:
+    name: Build and push all images
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - container: nodeapp-nginx
+            dir: nodeapp
+          - container: nodeapp-todo
+            dir: nodeapp
+          - container: nodeapp-cart
+            dir: nodeapp
+
+          - container: mediawiki-fpm
+            dir: mediawiki
+          - container: mediawiki-nginx
+            dir: mediawiki
+          - container: mediawiki-db
+            dir: mediawiki
+
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v4
+        with:
+          lfs: "true"
+
+      # - uses: actions/setup-go@v5
+      #   with:
+      #     go-version: '1.18'
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          file: ./benchmarks/${{ matrix.dir }}/Dockerfile
+          platforms: ${{ env.PLATFORMS }}
+          target: ${{ matrix.container }}
+          tags: davidschall/${{ matrix.container }}:latest
+          context: ./benchmarks/${{ matrix.dir }}
+
+
+  test-compose:
+    name: Test Docker Compose
+    needs: build-and-push
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - bm: nodeapp
+            yaml_file: benchmarks/nodeapp/docker-compose.yaml
+            urls_file: benchmarks/nodeapp/urls.tmpl
+          - bm: mediawiki
+            yaml_file: benchmarks/mediawiki/docker-compose.yaml
+            urls_file: benchmarks/mediawiki/urls.tmpl
+
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v4
+        with:
+          lfs: "true"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: start docker-compose benchmark
+        run: |
+          docker compose -f ${{ matrix.yaml_file }} pull
+          docker compose -f ${{ matrix.yaml_file }} up &> log_file &
+          sleep 60s
+          cat log_file
+
+      - name: build client
+        working-directory: client
+        run: |
+          make http-client
+
+      - name: invoke the service
+        run: |
+          ./client/http-client -f ${{ matrix.urls_file}} -url 0.0.0.0 -c 2 -n 10 -w 0 -v
+          curl 0.0.0.0:9999/
+
+      - name: show docker-compose log
+        run: cat log_file

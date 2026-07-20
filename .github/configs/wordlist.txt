@@ -1,0 +1,11 @@
+cd
+http
+JIT
+KVM
+kvm
+linux
+QEMU
+README
+repo
+sudo
+wkdir

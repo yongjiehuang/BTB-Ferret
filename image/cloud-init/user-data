@@ -1,0 +1,43 @@
+#cloud-config
+disable_root: false
+ssh_pwauth: true
+chpasswd:
+  expire: False
+  list: |
+    root:$6$FhcddHFVZ7ABA4Gi$9l4yURWASWe8xEa1jzI0bacVLvhe3Yn4/G3AnU11K3X0yu/mICVRxfo6tZTB2noKljlIRzjkVZPocdf63MtzC0
+
+users:
+- name: gem5
+  groups: sudo
+  sudo: ALL=(ALL) NOPASSWD:ALL
+  shell: /bin/bash
+  lock-passwd: false
+  ssh_pwauth: True
+  chpasswd: { expire: False }
+  passwd: "$6$VsN/A3Gxymcw$OBn8eFUvYeOmdDuvFjbiR.4jZvlQDbZIvNo3baDOKDNP0Z4evQgqVXBn3IwEOxM7MWjjoB65VkFFQunhajbNo0" # 1234
+
+package_update: true
+package_upgrade: true
+package_reboot_if_required: false
+packages:
+ - python-is-python3
+ - python3-pip
+
+runcmd:
+#  - echo "Port 8324" >> /etc/ssh/sshd_config
+ - touch /etc/cloud/cloud-init.disabled ## Disable cloud-init in the next run
+ - sed -ie 's/GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX="net.ifnames=0 biosdevname=0 elevator=noop"/' /etc/default/grub
+ - update-grub2
+ - systemctl restart ssh
+
+apt:
+  primary:
+    - arches: [default]
+      uri: http://archive.ubuntu.com/ubuntu/
+    - arches: [arm64, armhf]
+      uri: http://ports.ubuntu.com/ubuntu-ports/
+
+growpart:
+  mode: auto
+  devices: ["/"]
+  ignore_growroot_disabled: false

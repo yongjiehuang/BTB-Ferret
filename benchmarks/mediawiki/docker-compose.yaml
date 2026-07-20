@@ -1,0 +1,45 @@
+
+###
+services:
+
+  nginx:
+    depends_on:
+      - mediawiki
+    links:
+      - mediawiki
+    container_name: nginx
+    image: davidschall/mediawiki-nginx
+    ports:
+      - 9999:80
+    volumes:
+        - ./logs/nginx:/var/log/nginx
+        - wwwfiles:/var/www/mediawiki
+    restart: unless-stopped
+
+
+  mediawiki:
+    image: davidschall/mediawiki-fpm
+    container_name: wiki
+    links:
+      - database
+    depends_on:
+      - database
+    volumes:
+      - wwwfiles:/var/www/mediawiki
+    restart: unless-stopped
+
+
+  database:
+    image: davidschall/mediawiki-db
+    container_name: database
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: 'wiki'
+      MYSQL_USER: 'wikiuser'
+      MYSQL_PASSWORD: password
+    volumes:
+      - ./db_wiki:/var/lib/mysql
+    restart: unless-stopped
+
+volumes:
+  wwwfiles:
