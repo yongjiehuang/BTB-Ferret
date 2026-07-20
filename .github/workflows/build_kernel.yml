@@ -72,7 +72,7 @@ jobs:
 
       - name: Restore linux kernel cache
         id: cache-linux-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: linux
           key: ${{ runner.os }}-linux
@@ -84,7 +84,7 @@ jobs:
 
       - name: Save linux kernel cache
         id: cache-linux-save
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: linux
           key: ${{ runner.os }}-linux
