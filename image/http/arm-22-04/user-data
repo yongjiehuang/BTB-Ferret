@@ -1,0 +1,97 @@
+
+#cloud-config
+autoinstall:
+  apt:
+    disable_components: []
+    geoip: true
+    preserve_sources_list: false
+    primary:
+    - arches:
+      - amd64
+      - i386
+      uri: http://archive.ubuntu.com/ubuntu
+    - arches:
+      - default
+      uri: http://us.ports.ubuntu.com/ubuntu-ports
+
+  drivers:
+    install: false
+  identity:
+    hostname: gem5
+    password: $6$TBZcqP/4zmP6cvBx$x4MAAfPL25/QAI6tRGfzJJG1.wcvTew15FVIZc3ys4jvbRiI/8eBBd9HLUm0HJAXNFsBDCdBBM0gZ4vauiH5s.
+    realname: gem5
+    username: gem5
+  kernel:
+    package: linux-generic
+  keyboard:
+    layout: us
+    toggle: null
+    variant: ''
+  locale: en_US.UTF-8
+  network:
+    ethernets:
+      enp0s1:
+        dhcp4: true
+      enp0s3:
+        dhcp4: true
+    version: 2
+  ssh:
+    allow-pw: true
+    authorized-keys: []
+    install-server: true
+  late-commands:
+  # https://github.com/hashicorp/packer-plugin-qemu/issues/66#issuecomment-1466049817
+    - |
+      if [ -d /sys/firmware/efi ]; then
+        apt-get install -y efibootmgr
+        efibootmgr -o $(efibootmgr | perl -n -e '/Boot(.+)\* ubuntu/ && print $1')
+      fi
+
+  storage:
+    config:
+    - ptable: gpt
+      path: /dev/vda
+      wipe: superblock-recursive
+      preserve: false
+      name: ''
+      grub_device: false
+      type: disk
+      id: disk-vda
+    - device: disk-vda
+      size: 564133888  ## Size of boot partition: 564,133,888
+      wipe: superblock
+      flag: boot
+      number: 1
+      preserve: false
+      grub_device: true
+      type: partition
+      id: partition-0
+    - fstype: fat32
+      volume: partition-0
+      preserve: false
+      type: format
+      id: format-0
+    - device: disk-vda
+      size: 15000000000 # size of main partition (15 GB) -> 15GB + 564,133,888 + 1MB reserved = 
+      wipe: superblock
+      flag: ''
+      number: 2
+      preserve: false
+      grub_device: false
+      type: partition
+      id: partition-1
+    - fstype: ext4
+      volume: partition-1
+      preserve: false
+      type: format
+      id: format-1
+    - path: /
+      device: format-1
+      type: mount
+      id: mount-1
+    - path: /boot/efi
+      device: format-0
+      type: mount
+      id: mount-0
+  updates: security
+  version: 1

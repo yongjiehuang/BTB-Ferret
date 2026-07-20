@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../gem5-fdp/src"
+		}
+	],
+	"settings": {}
+}

@@ -1,0 +1,67 @@
+### Docker Compose Example for Kinda Lame
+### Created October 2020
+###
+version: '3.2'
+services:
+
+
+  # ## The Wiki services with and without memcached
+  # wiki:
+  #   image: davidschall/mediawiki
+  #   container_name: wiki
+  #   ports:
+  #     - 9999:80
+  #   links:
+  #     - database
+  #   restart: unless-stopped
+
+  # web:
+  #   image: nginx
+  #   volumes:
+  #   - ./templates:/etc/nginx/templates
+  #   ports:
+  #   - 9999:80
+  #   environment:
+  #   - NGINX_HOST=example.com
+  #   - NGINX_PORT=80
+
+  wiki-memc:
+    image: davidschall/mediawiki-memc
+    container_name: wiki
+    ports:
+      - 9999:80
+    links:
+      - database
+      - memcached
+    depends_on:
+      - database
+      - memcached
+    restart: unless-stopped
+
+
+  database:
+    image: davidschall/mediawiki-db
+    container_name: database
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: 'wiki'
+      MYSQL_USER: 'wikiuser'
+      MYSQL_PASSWORD: password
+    volumes:
+      - ./db_wiki:/var/lib/mysql
+    restart: unless-stopped
+
+
+  memcached:
+    image: memcached
+    container_name: memcached
+    ports:
+     - 11212:11211
+    restart: always
+    environment:
+      - MEMCACHED_CACHE_SIZE=8
+      - MEMCACHED_THREADS=2
+    logging:
+      options:
+        max-size: 50m
+

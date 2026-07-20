@@ -1,0 +1,55 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+
+wkdir*
+packer
+image/artifacts/*
+*flash*
+kernel/linux/*
+m5out
+checkpoints
+results
+*.img
+*.log
+image/qemu.log
+image/packer.log
+
+__pycache__
+
+collected
+
+client/output
+image/tmp
+
+results.csv

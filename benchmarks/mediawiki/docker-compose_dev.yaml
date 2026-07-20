@@ -1,0 +1,54 @@
+### Docker Compose Example for Kinda Lame
+### Created October 2020
+###
+version: '3.2'
+services:
+  web:
+    image: mediawiki:lts
+    container_name: wiki
+    ports:
+### We are running the server behind NGINX which we
+### recommend all users doing. And due to the need to
+### login to the site we recommend running Certbot
+### on your domain and putting the proxy behind
+### an SSL certificate to keep your passwords safe!
+###
+### CHANGE THE PORT BELOW FROM 9999 TO YOUR DESIRED PORT
+      - 9999:80
+    links:
+      - database
+    restart: unless-stopped
+    volumes:
+     - ./images:/var/www/html/images
+    #  - ./LocalSettings.php:/var/www/html/LocalSettings.php
+    #  - ./www:/var/www
+#      - ./uploads.ini:/etc/php5/fpm/conf.d/uploads.ini:ro
+     - ./php:/usr/local/etc/php
+  database:
+    image: mariadb
+    container_name: database
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: 'wiki'
+      MYSQL_USER: 'wikiuser'
+      MYSQL_PASSWORD: password
+    volumes:
+      - ./database:/var/lib/mysql
+      # - ./database2:/var/lib/mysql
+
+      - ./wiki.sql.gz:/docker-entrypoint-initdb.d/wiki.sql.gz
+    restart: unless-stopped
+
+
+  memcached:
+    image: memcached
+    container_name: memcached
+    ports:
+     - 11212:11211
+    restart: always
+    environment:
+      - MEMCACHED_CACHE_SIZE=8
+      - MEMCACHED_THREADS=2
+    logging:
+      options:
+        max-size: 50m
