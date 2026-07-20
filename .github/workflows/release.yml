@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Kernel Artifacts
-        uses: dawidd6/action-download-artifact@v9
+        uses: dawidd6/action-download-artifact@v21
         with:
           workflow: build_kernel.yml
           name: vmlinux-*
