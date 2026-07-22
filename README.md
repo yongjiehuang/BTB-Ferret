@@ -157,36 +157,19 @@ simpoints/all_4_run_single_simpoints.sh
 
 The script contains the architectural parameters, the BTB hierarchy
 configuration, the workload lists, and a set of pre-defined experiment
-groups. To run an experiment, uncomment exactly one group of
-`EXPERIMENT` / `PPOLICY` (and any associated parameter overrides) near
-the top of the script:
+groups. The experiment group is selected via a command-line argument spefifying different configurations.
+The available options are:
 
-```bash
-# --- Uncomment the experiment you want to run ---
-# ------ baseline ------
-EXPERIMENT="baseline-2level"
-PPOLICY=""
-# ----------------------
-
-# ------ BTB-Ferret ------
-# EXPERIMENT="BTB-Ferret"
-# PPOLICY="--trainBitsOnCommit --prefetchOnPrefetchHit --limitRet --newPBits --pDepth 14 --maxChainTrackerEntries 8"
-# ----------------------
-
-# ------ Ideal-BTB ------
-# EXPERIMENT="Ideal-BTB"
-# PPOLICY=""
-# L2LATENCY=0
-# ----------------------
-
-```
+| Argument               | `EXPERIMENT`        | Description                            |
+|------------------------|---------------------|----------------------------------------|
+| `--baseline-2level`    | `baseline-2level`   | 2-level BTB baseline (no prefetcher)   |
+| `--BTB-Ferret`         | `BTB-Ferret`        | BTB-Ferret on the 2-level BTB hierarchy|
+| `--Ideal-BTB`          | `Ideal-BTB`         | Ideal BTB (opportunity for Prefetching)|
 
 `EXPERIMENT` is the directory name under which the simulation results
-are stored. The `baseline-2level` group runs the 2-level BTB baseline
-(empty `PPOLICY`); `BTB-Ferret` enables BTB-Ferret on the 2-level
-hierarchy; `Ideal-BTB` models an ideal L2 BTB by setting `L2LATENCY=0`.
-Run each group separately to avoid overwriting
-previous results.
+are stored, so each group writes to a separate directory and they do not
+overwrite each other. Run the script with no argument to see the usage
+summary.
 
 The workload suites can be enabled or disabled with:
 
@@ -208,10 +191,11 @@ Make the experiment script executable:
 chmod +x simpoints/all_4_run_single_simpoints.sh
 ```
 
-Run the selected configuration:
+Run the selected configuration, passing the specific experiment as an
+argument:
 
 ```bash
-./simpoints/all_4_run_single_simpoints.sh
+./simpoints/all_4_run_single_simpoints.sh --BTB-Ferret
 ```
 
 For each enabled workload, the script selects the SimPoint with the largest weight.

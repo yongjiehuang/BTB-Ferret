@@ -1,7 +1,7 @@
 set -x
 
-GEM5=PathTo_BTB-Ferret/gem5/build/ARM/gem5.opt
-# GEM5=/home/yongjie/gem5.opt
+# GEM5=PathTo_BTB-Ferret/gem5/build/ARM/gem5.opt
+GEM5=/home/yongjie/BTB-Ferret/gem5/build/ARM/gem5.opt
 
 
 FACTOR=1
@@ -30,31 +30,55 @@ CPU_TYPE="o3"
 
 
 
-# --- Uncomment the experiment you want to run ---
-# ------ baseline ------
-EXPERIMENT="baseline-2level"
+# --- Select the experiment via command-line argument ---
+# Usage: ./all_4_run_single_simpoints.sh --<experiment>
+#   --baseline-2level       2-level BTB baseline (no prefetcher)
+#   --BTB-Ferret            BTB-Ferret on 2-level BTB
+#   --Ideal-BTB             Ideal BTB (L2 latency = 0)
+#   --BTB-Ferret-3level     BTB-Ferret on 3-level BTB (enables L3, retunes L2)
+
+EXPERIMENT=""
 PPOLICY=""
-# ----------------------
 
-# ------ BTB-Ferret ------
-# EXPERIMENT="BTB-Ferret"
-# PPOLICY="--trainBitsOnCommit --prefetchOnPrefetchHit --limitRet --newPBits --pDepth 14 --maxChainTrackerEntries 8"
-# ----------------------
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 --<experiment>"
+    echo "  --baseline-2level       2-level BTB baseline (no prefetcher)"
+    echo "  --BTB-Ferret            BTB-Ferret on 2-level BTB"
+    echo "  --Ideal-BTB             Ideal BTB (L2 latency = 0)"
+    echo "  --BTB-Ferret-3level     BTB-Ferret on 3-level BTB (enables L3, retunes L2)"
+    exit 1
+fi
 
-# ------ Ideal-BTB ------
-# EXPERIMENT="Ideal-BTB"
-# PPOLICY=""
-# L2LATENCY=0
-# ----------------------
+case "$1" in
+    --baseline-2level)
+        EXPERIMENT="baseline-2level"
+        PPOLICY=""
+        ;;
+    --BTB-Ferret)
+        EXPERIMENT="BTB-Ferret"
+        PPOLICY="--trainBitsOnCommit --prefetchOnPrefetchHit --limitRet --newPBits --pDepth 14 --maxChainTrackerEntries 8"
+        ;;
+    --Ideal-BTB)
+        EXPERIMENT="Ideal-BTB"
+        PPOLICY=""
+        L2LATENCY=0
+        ;;
+    --BTB-Ferret-3level)
+        EXPERIMENT="BTB-Ferret-3level"
+        PPOLICY="--trainBitsOnCommit --prefetchOnPrefetchHit --limitRet --newPBits --pDepth 14 --maxChainTrackerEntries 8 --enableL3"
+        L2NUMENTRIES=6144
+        L2LATENCY=1
+        L3LATENCY=3
+        L2ASSOC=6
+        ;;
+    *)
+        echo "Unknown experiment: $1"
+        echo "Usage: $0 --baseline-2level | --BTB-Ferret | --Ideal-BTB | --BTB-Ferret-3level"
+        exit 1
+        ;;
+esac
 
-# ------ BTB-Ferret-3level ------
-# EXPERIMENT="BTB-Ferret-3level"
-# PPOLICY="--trainBitsOnCommit --prefetchOnPrefetchHit --limitRet --newPBits --pDepth 14 --maxChainTrackerEntries 8 --enableL3"
-# L2NUMENTRIES=6144
-# L2LATENCY=1
-# L3LATENCY=3
-# L2ASSOC=6
-# ----------------------
+echo "Selected experiment: $EXPERIMENT (PPOLICY: $PPOLICY)"
 
 
 # --- Suite Configurations ---
@@ -138,12 +162,12 @@ fi
 
 RESULTS_DIR="./results/$EXPERIMENT"
 
-if ! pgrep -x "pueued" > /dev/null; then
-    pueued -d
-fi
+# if ! pgrep -x "pueued" > /dev/null; then
+#     pueued -d
+# fi
 
 PGROUP="$ARCH-$EXPERIMENT"
-pueue group add -p 100 "$PGROUP" || true
+# pueue group add -p 100 "$PGROUP" || true
 sudo chown $(id -u) /dev/kvm
 
 # Execution Loop
@@ -181,10 +205,10 @@ for suite in "spec" "svr"; do
         fi
 
         RESDIR=${RESULTS_DIR}/$bm/sid$sid
-        # if [ -d "$RESDIR" ]; then
-        #     echo "Skipping $bm (SID: $sid) - Result directory already exists."
-        #     continue
-        # fi
+        if [ -d "$RESDIR" ]; then
+            echo "Skipping $bm (SID: $sid) - Result directory already exists."
+            continue
+        fi
         mkdir -p $RESDIR
 
         echo "Enqueuing $suite:$bm (SID: $sid)"
